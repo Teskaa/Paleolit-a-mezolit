@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Paleolit a Mezolit - Rozvětvená textovka</title>
+<style>
+body { 
+    background-color: #000; 
+    color: #fff; 
+    font-family: monospace; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-start; 
+    padding: 50px; 
+    height: 100vh; 
+    box-sizing: border-box;
+}
+#text { max-width: 1200px; line-height: 1.6; margin-bottom: 50px; }
+.choice {
+    background-color: #4682B4; 
+    border: none; 
+    padding: 20px; 
+    margin: 10px; 
+    width: 80%; 
+    font-size: 20px; 
+    cursor: pointer;
+    text-align: left;
+}
+.choice:hover { background-color: #5a9bd4; }
+</style>
+</head>
+<body>
+<div id="text"></div>
+<div id="choices"></div>
+
+<script>
+function shuffleArray(array){
+    for(let i=array.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [array[i],array[j]]=[array[j],array[i]];
+    }
+    return array;
+}
+
+const scenes = {
+start: {
+    text:"Jsi členem kmene. Ráno se probouzíte v lese a kmen je hladový.",
+    choices:{hunt:"Vyrazím na lov mamuta.", gather:"Sbírám plody a kořínky.", plan:"Zůstanu u ohně a plánuji."},
+    next:{hunt:"hunt1", gather:"cave1", plan:"cave1"}
+},
+hunt1:{
+    text:"V hlubokém lese cítíte napětí. Mamut je obrovský a každý krok může rozhodnout o životě kmene.",
+    choices:{attack:"Napadnu mamuta.", observe:"Pozorovat a čekat.", retreat:"Vrátit se k ostatním."},
+    next:{attack:"river1", observe:"river1", retreat:"river1"}
+},
+cave1:{
+    text:"Objevili jste starou jeskyni. Malby na stěnách vyprávějí příběhy předků.",
+    choices:{explore:"Prozkoumat malby.", rest:"Odpočinout si u ohně.", ignore:"Pokračovat ven."},
+    next:{explore:"river1", rest:"river1", ignore:"river1"}
+},
+river1:{
+    text:"Narazili jste na řeku plnou ryb. Je to zdroj vody i potravy.",
+    choices:{fish:"Lovit ryby.", observe:"Pouze pozorovat.", ignore:"Ignorovat řeku."},
+    next:{fish:"forest1", observe:"forest1", ignore:"forest1"}
+},
+forest1:{
+    text:"V lese slyšíte zvuky predátora. Můžete útočit, schovat se, nebo utéct zpět k táboru.",
+    choices:{attack:"Zaútočit.", hide:"Schovat se.", retreat:"Utéct."},
+    next:{attack:"storm1", hide:"storm1", retreat:"storm1"}
+},
+storm1:{
+    text:"Bouře přichází rychle. Déšť a vítr ohrožují přístřešek kmene.",
+    choices:{hide:"Ukryju kmen.", build:"Postavíme přístřešek.", ignore:"Zůstat na místě."},
+    next:{hide:"ally1", build:"ally1", ignore:"ally1"}
+},
+ally1:{
+    text:"Další kmen se blíží. Můžete se spojit, bojovat, nebo ignorovat jejich přítomnost.",
+    choices:{friend:"Navázat přátelství.", fight:"Postavit se kmenům.", ignore:"Ignorovat."},
+    next:{friend:"final1", fight:"final2", ignore:"final3"}
+},
+final1:{
+    text:"Kmen díky spojenectví rozkvétá a učí se nové dovednosti.",
+    choices:{prosper:"Kmen se stává mocným a prosperujícím."},
+    next:{prosper:"end_prosper"}
+},
+final2:{
+    text:"Kmen přežil boj, ale je oslaben a opatrný.",
+    choices:{small:"Zůstává malý a opatrný."},
+    next:{small:"end_small"}
+},
+final3:{
+    text:"Ignorování ostatních kmenů způsobilo problémy a nejistotu budoucnosti.",
+    choices:{collapse:"Kmen utrpěl ztráty."},
+    next:{collapse:"end_collapse"}
+},
+// Další scény pro rozvětvení
+forest_fail:{
+    text:"Při nepozornosti jste málem přišli o člena kmene. Kmen se poučil.",
+    choices:{continue:"Pokračovat k bouři."},
+    next:{continue:"storm1"}
+},
+cave_fail:{
+    text:"Prozkoumání jeskyně bylo riskantní, ale všichni přežili.",
+    choices:{continue:"Vrátit se k řece."},
+    next:{continue:"river1"}
+},
+extra1:{
+    text:"Ztracený putující kmen nabízí výměnu zdrojů. Můžete přijmout nebo odmítnout.",
+    choices:{accept:"Přijmout výměnu.", reject:"Odmítnout."},
+    next:{accept:"final1", reject:"final3"}
+},
+extra2:{
+    text:"Objevili jste tajnou jeskyni s unikátními malbami.",
+    choices:{explore:"Prozkoumat.", ignore:"Ignorovat."},
+    next:{explore:"forest1", ignore:"river1"}
+},
+extra3:{
+    text:"Noc přináší chlad. Můžete přikrýt kmen ohněm nebo jít spát.",
+    choices:{fire:"Udělat oheň.", sleep:"Spát."},
+    next:{fire:"ally1", sleep:"storm1"}
+}
+};
+
+const endings = {
+end_prosper:"Kmen rozkvétá a stává se legendou.",
+end_small:"Kmen přežil, ale zůstává malý.",
+end_collapse:"Kmen utrpěl těžké ztráty.",
+end_river:"Kmen našel zdroje, ale zůstal malý.",
+end_cave:"Kmen objevil jeskyni, ale pokrok žádný.",
+end_storm:"Kmen přežil bouři, ale je oslabený.",
+end_fight:"Kmen bojoval, přežil, ale je ztracen.",
+end_ignore:"Kmen ignoroval problémy, výsledek nejistý."
+};
+
+let currentScene = "start";
+
+function showScene(key){
+    const scene = scenes[key];
+    const textDiv = document.getElementById("text");
+    const choicesDiv = document.getElementById("choices");
+    textDiv.innerHTML = scene.text;
+    choicesDiv.innerHTML = "";
+    let btns=[];
+    for(let c in scene.choices){
+        const btn = document.createElement("button");
+        btn.className="choice";
+        btn.innerText=scene.choices[c];
+        btn.dataset.next=scene.next[c];
+        btns.push(btn);
+    }
+    btns=shuffleArray(btns);
+    btns.forEach(btn=>{
+        btn.onclick=()=>{
+            const nextScene=btn.dataset.next;
+            if(endings[nextScene]){
+                showEnding(nextScene);
+            }else{
+                showScene(nextScene);
+            }
+        };
+        choicesDiv.appendChild(btn);
+    });
+}
+
+function showEnding(key){
+    const textDiv=document.getElementById("text");
+    const choicesDiv=document.getElementById("choices");
+    textDiv.innerHTML="Konec hry: "+endings[key];
+    choicesDiv.innerHTML="";
+}
+
+showScene(currentScene);
+</script>
+</body>
+</html>
